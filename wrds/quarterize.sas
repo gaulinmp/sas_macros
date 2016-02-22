@@ -28,7 +28,7 @@
 /*        I/S items in Compustat are quarterly numbers */
 /*        GVKEY FYR Combination is necessary for unique identification of records */
 
-%IF "&debug."!="True" %THEN %DO;
+%IF "&debug."^="True" %THEN %DO;
  OPTIONS nonotes;
 %END;
 /* Count the Number of Cash Flow Variables */
@@ -86,7 +86,7 @@ drop del i j k;
 run;
 
 /* House Cleaning */
-%IF "&debug."!="True" %THEN %DO;
+%IF "&debug."^="True" %THEN %DO;
   PROC SQL;
     DROP TABLE __qtrz;
   QUIT;
