@@ -1,3 +1,4 @@
 # SAS log and output lst files
 *.log
 *.lst
+__pycache__/
