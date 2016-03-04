@@ -30,9 +30,9 @@ def ktoq(kfield, fundq_fields):
 
 WRDS_PATH = '/data/storage/wrds/comp/'
 
-FIELDS = ('gvkey cik tic cusip conm datadate fyear fyr fqtr sich at lt '
-          'prcc_f cshpri txditc invt ppent pi ni sale re act lct csho xrd '
-          'ajex oibdp oancf dvt dlc dltt'.split())
+FIELDS = ('gvkey cik tic cusip conm datadate fyear fyr fqtr sich rdq datafqtr '
+          'at lt prcc_f cshpri txditc invt ppent pi ni sale re act lct '
+          'csho xrd ajex oibdp oancf dvt dlc dltt'.split())
 
 SQL_STRING = """
 LIBNAME comp "/data/storage/wrds/comp/";
@@ -107,11 +107,11 @@ def main(do_funda=True, do_fundq=True):
         fh.write(q_sql)
 
     import subprocess
-    if do_funda: 
+    if do_funda:
         print("Processing FUNDA!")
         (subprocess.check_output(['sas', '/tmp/funda.sas']))
         print("Done with FUNDA!")
-    if do_fundq: 
+    if do_fundq:
         print("Processing FUNDQ!")
         (subprocess.check_output(['sas', '/tmp/fundq.sas']))
         print("Done with FUNDQ!")
