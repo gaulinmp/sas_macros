@@ -61,6 +61,28 @@ ENDRSUBMIT;
 %PUT;
 
 
+%PUT %NRSTR(%%)COMPWHERE(libname);
+%MACRO COMPWHERE(libname);
+  /* EXAMPLE:
+  PROC SQL;
+    CREATE TABLE tmp AS
+    SELECT gvkey, datadate
+    FROM comp.funda
+    WHERE %COMPWHERE()
+      AND gvkey EQ '001004'
+    ORDER BY gvkey;
+  QUIT;
+   */
+  %IF "&libname." ne "" %THEN %LET libname=&libname..;
+  %IF "" EQ "" %THEN %DO;
+      &libname.INDFMT = 'INDL'
+  AND &libname.DATAFMT = 'STD'
+  AND &libname.POPSRC = 'D'
+  AND &libname.CONSOL = 'C'
+  %END;
+%MEND COMPWHERE;
+
+
 %PUT %NRSTR(%%)CONCATABLES(train, caboose);
 %MACRO CONCATABLES(train, caboose);
     %IF NOT %SYSFUNC(EXIST(&train)) %THEN %DO;
@@ -114,20 +136,20 @@ QUIT;
 
 
 
-%PUT %NRSTR(%%)EXPORT_STATA(db_in=,filename=);
-%MACRO EXPORT_STATA(db_in=,filename=);
-%EXPORT(dbms="STATA",db_in=&db_in,filename=&filename);
-%MEND EXPORT_STATA;
-
-
-
 %PUT %NRSTR(%%)EXPORT(dbms=TAB,db_in=syslast,filename=);
 %MACRO EXPORT(dbms=TAB,db_in=&syslast.,filename=);
-PROC EXPORT DATA=&db_in
-        OUTFILE= &filename
-        DBMS=&dbms REPLACE;
-        RUN;
+  PROC EXPORT DATA=&db_in
+              OUTFILE= &filename
+              DBMS=&dbms REPLACE;
+  RUN;
 %MEND EXPORT;
+
+
+
+%PUT %NRSTR(%%)EXPORT_STATA(db_in=,filename=);
+%MACRO EXPORT_STATA(db_in=,filename=);
+  %EXPORT(dbms="STATA",db_in=&db_in,filename=&filename);
+%MEND EXPORT_STATA;
 
 
 
@@ -135,8 +157,8 @@ PROC EXPORT DATA=&db_in
 
 %PUT %NRSTR(%%)HEAD(db_in=syslast, n=2);
 %MACRO HEAD(db_in=&syslast, n=2);
-PROC PRINT DATA=&db_in(obs=&n);
-RUN;
+  PROC PRINT DATA=&db_in(obs=&n);
+  RUN;
 %MEND HEAD;
 
 
@@ -146,55 +168,55 @@ RUN;
 
 %PUT %NRSTR(%%)STATS(db_in=tmp,db_out=summary_stats,vars=ret, by=none);
 %MACRO STATS(db_in=tmp,db_out=summary_stats,vars=ret, by=none);
-    %local count;
-    %LOCAL db_delim;
-    %let count=0;
-    %LET db_delim=xzxz;
-    DATA &db_delim.fromfile;SET &db_in;RUN;
-    %DO %WHILE(%QSCAN(&vars,&count+1,%STR( )) ne %STR());
-        %let var = %QSCAN(&vars,&count+1,%STR( ));
-        %PUT Starting to calculate stats for &var....;
-        %IF &by ne none %THEN %DO;
-          PROC SORT DATA=&db_delim.fromfile;
-              BY &by;
-              RUN;
-        %END;
-        PROC UNIVARIATE DATA=&db_delim.fromfile NOPRINT;
-            VAR &var;
-            OUTPUT OUT=&db_delim.univ MEAN=mean STD=standard_dev
-                T=tstat PROBT=pstat MIN=min P1=pct1 Q1=pct25
-                MEDIAN=median Q3=pct75 P99=pct99 MAX=max N=nobs;
-            %IF &by ne none %THEN %DO;
+  %local count;
+  %LOCAL db_delim;
+  %let count=0;
+  %LET db_delim=xzxz;
+  DATA &db_delim.fromfile;SET &db_in;RUN;
+  %DO %WHILE(%QSCAN(&vars,&count+1,%STR( )) ne %STR());
+      %let var = %QSCAN(&vars,&count+1,%STR( ));
+      %PUT Starting to calculate stats for &var....;
+      %IF &by ne none %THEN %DO;
+        PROC SORT DATA=&db_delim.fromfile;
             BY &by;
-            %END;
+            RUN;
+      %END;
+      PROC UNIVARIATE DATA=&db_delim.fromfile NOPRINT;
+          VAR &var;
+          OUTPUT OUT=&db_delim.univ MEAN=mean STD=standard_dev
+              T=tstat PROBT=pstat MIN=min P1=pct1 Q1=pct25
+              MEDIAN=median Q3=pct75 P99=pct99 MAX=max N=nobs;
+          %IF &by ne none %THEN %DO;
+          BY &by;
+          %END;
+      RUN;
+      %PUT Creating &db_delim.var to add varname in the right order.;
+      DATA &db_delim.var;
+          LENGTH varname $ 12;
+          VARNAME = "&var";
+          SET &db_delim.univ;
         RUN;
-        %PUT Creating &db_delim.var to add varname in the right order.;
-        DATA &db_delim.var;
-            LENGTH varname $ 12;
-            VARNAME = "&var";
-            SET &db_delim.univ;
-          RUN;
-        %IF NOT %SYSFUNC(EXIST(&db_out)) %THEN %DO;
-            %PUT Did not find &db_out so creating it now...;
-            DATA &db_out;
-                SET &db_delim.var;
-                RUN;
-        %END;%ELSE %DO;
-            %PUT Found &db_out so merging &db_delim.var with it;
-            DATA &db_out;
-                MERGE &db_out &db_delim.var;
-                BY varname;
-                RUN;
-        %END;
-        %PUT Done with &var, deleting &db_delim.var and &db_delim.univ;
-        PROC SQL;
-            DROP TABLE &db_delim.univ, &db_delim.var;
-        QUIT;
-        %LET count = %EVAL(&count+1);
-    %END;
-    PROC SQL;
-      DROP TABLE &db_delim.fromfile;
-    QUIT;
+      %IF NOT %SYSFUNC(EXIST(&db_out)) %THEN %DO;
+          %PUT Did not find &db_out so creating it now...;
+          DATA &db_out;
+              SET &db_delim.var;
+              RUN;
+      %END;%ELSE %DO;
+          %PUT Found &db_out so merging &db_delim.var with it;
+          DATA &db_out;
+              MERGE &db_out &db_delim.var;
+              BY varname;
+              RUN;
+      %END;
+      %PUT Done with &var, deleting &db_delim.var and &db_delim.univ;
+      PROC SQL;
+          DROP TABLE &db_delim.univ, &db_delim.var;
+      QUIT;
+      %LET count = %EVAL(&count+1);
+  %END;
+  PROC SQL;
+    DROP TABLE &db_delim.fromfile;
+  QUIT;
 %MEND STATS;
 
 
@@ -231,43 +253,9 @@ RUN;
       %PUT Library or database do not exist.;
   %END;
 
-    OPTIONS &src &nt;
+  OPTIONS &src &nt;
 
 %MEND REMOVE_LABELS;
-
-
-
-
-
-
-
-%PUT %NRSTR(%%)WRDS("open/close");
-%MACRO WRDS(action);
-    %IF &action = "open" %THEN %DO;
-        %LET WRDS=wrds.wharton.upenn.edu 4016;
-        %LET pass=%STR({sasenc}B24B51461A717C14420E928208ACE601302FA42733A74A2700ACDA3B1BFD75F551D891AE0B496183457148A1482C287B);
-        OPTIONS comamid=TCP remote=WRDS;
-        SIGNON USERNAME="gaulinmp" PASSWORD="&pass";
-    %END;
-    %ELSE SIGNOFF;
-%MEND WRDS;
-
-
-
-
-%PUT %NRSTR(%%)FSERVER("open/close");
-%MACRO FSERVER(action);
-    %IF &action = "open" %THEN %DO;
-        %LET fs=fs.rice.edu 5019;
-        FILENAME rlink "D:\Program Files\SASHome\SASFoundation\9.3\connect\saslink\tcpunix.scr";
-        *%LET pass=%STR({sasenc}59364E5303E96D21041700E711DA5776105CF0E6);
-        OPTIONS COMAMID=TCP REMOTE=fs;
-        SIGNON;* USERNAME="mpg1" PASSWORD="&pass";
-    %END;
-    %ELSE SIGNOFF;
-%MEND FSERVER;
-
-
 
 
 
