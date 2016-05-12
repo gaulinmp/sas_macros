@@ -30,10 +30,7 @@ RSUBMIT;
         FROM comp.funda AS f
         LEFT JOIN comp.NAMES as nam
             ON f.gvkey = nam.gvkey
-        WHERE INDFMT= 'INDL'
-        AND DATAFMT='STD'
-        AND POPSRC='D'
-        AND CONSOL='C'
+        WHERE %COMPWHERE(f)
         AND DATADATE >= '01JAN1960'd
         AND DATADATE <= '01JAN2012'd
         /*AND nam.sic NOT LIKE "6%"*/;
@@ -1213,6 +1210,7 @@ set &db_in;
     if &sic ge 9990 and &sic le 9999   then FF_IND='OTHER';
     if FF_IND='OTHER' then &ind_var=48;
 
+%IF "&dummy_prefix" NE "" %THEN %DO;
     if(&ind_var=1) then &dummy_prefix.1=1;        else &dummy_prefix.1=0;
     if(&ind_var=2) then &dummy_prefix.2=1;        else &dummy_prefix.2=0;
     if(&ind_var=3) then &dummy_prefix.3=1;        else &dummy_prefix.3=0;
@@ -1261,6 +1259,7 @@ set &db_in;
     if(&ind_var=46) then &dummy_prefix.46=1;        else &dummy_prefix.46=0;
     if(&ind_var=47) then &dummy_prefix.47=1;        else &dummy_prefix.47=0;
     if(&ind_var=48) then &dummy_prefix.48=1;        else &dummy_prefix.48=0;
-run;
+%END;
+RUN;
 
-%mend;
+%MEND;
