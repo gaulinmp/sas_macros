@@ -31,8 +31,9 @@ def ktoq(kfield, fundq_fields):
 WRDS_PATH = '/data/storage/wrds/comp/'
 
 FIELDS = ('gvkey cik tic datadate fyear fyr fqtr rdq datafqtr datacqtr '
-          'conm cusip sich at lt prcc_f cshpri txditc invt ppent pi ni '
-          'sale re act lct csho xrd ajex oibdp oancf dvt dlc dltt'.split())
+          'conm cusip sich at lt teq prcc_f cshpri txditc invt ppent pi ni ib '
+          'sale re act lct csho xrd ajex oibdp oancf dvt dlc dltt pstk '
+          'dp wcap ').split()
 
 SQL_STRING = """
 LIBNAME comp "/data/storage/wrds/comp/";
