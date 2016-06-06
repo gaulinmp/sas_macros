@@ -4,12 +4,20 @@
 This module creates .SAS files to download and merge Compustat.
 It only keeps the variables specified.
 It will only work out of the box if your filesystem looks like mine.
+
+Usage:
+    get_crsp_comp.py [options]
+
+Options:
+    -h, --help       Show this help
+    -a, --annual     Create Annual FUNDA file
+    -q, --quarter    Create Quarterly FUNDQ file
 """
 
 import os
 import datetime as dt
+from docopt import docopt
 import pandas as pd
-# sas7bdat for reading SAS created databases
 from sas7bdat import SAS7BDAT as SASdb
 
 SAS_ZERO = dt.datetime(1960,1,1)
@@ -119,4 +127,8 @@ def main(do_funda=True, do_fundq=True):
 
 
 if __name__ == '__main__':
-    main()
+    _args = docopt(__doc__)
+    do_funda=_args.get('--annual', False)
+    do_fundq=_args.get('--quarter', False)
+    if do_funda or do_fundq:
+        main(do_funda=do_funda, do_fundq=do_fundq)
