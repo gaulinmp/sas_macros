@@ -10,11 +10,12 @@
 %PUT " ********************************************************************************* ";
 %PUT;
 %PUT %NRSTR(%%)CCM(db_in=, db_out=, datevar=datadate, link_table=ccm.ccmxpf_linktable, ;
-%PUT .    LINKTYPE=LULC,REMDUPS=1,OVERLAP=0, debug=False)%NRSTR(;);
+%PUT .    linktype=LULC,remdups=1,overlap=0, debug=False)%NRSTR(;);
 
 %MACRO CCM(db_in=, db_out=, datevar=datadate, link_table=ccm.ccmxpf_linktable,
-           LINKTYPE=LULC,REMDUPS=1,OVERLAP=0, debug=False);
+           linktype=LULC, remdups=1, overlap=0, debug=False);
 
+%PUT "&debug.";
 %IF "&debug."!="True" %THEN %DO;
  OPTIONS nonotes;
 %END;
