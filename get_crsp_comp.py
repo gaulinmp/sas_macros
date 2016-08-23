@@ -41,25 +41,25 @@ WRDS_PATH = '/data/storage/wrds/comp/'
 FIELDS = ('gvkey cik tic datadate fyear fyr fqtr rdq datafqtr datacqtr '
           'conm cusip sich at lt teq prcc_f cshpri txditc invt ppent pi ni ib '
           'sale re act lct csho xrd ajex oibdp oancf dvt dlc dltt pstk '
-          'dp wcap xint ').split()
+          'dp wcap xint gdwlia xi ').split()
 
 SQL_STRING = """
 LIBNAME comp "/data/storage/wrds/comp/";
 LIBNAME data "~/Dropbox/Documents/School/_data/big/";
-LIBNAME ccm "/data/storage/wrds/comp/";
 
 %INCLUDE "~/Dropbox/Documents/Programming/SAS/sas_macros/wrds/quarterize.sas";
 %INCLUDE "~/Dropbox/Documents/Programming/SAS/sas_macros/wrds/ccm.sas";
 
 PROC SQL;
-    CREATE TABLE {table_out} AS
-    SELECT {fields}
+    CREATE TABLE {table_out}(WHERE=(DATADATE GE '01JAN1990'd)) AS
+    SELECT {fields},
+        MIN(datadate) AS crsp_start FORMAT YYMMDD10.
     FROM {table_from}
     WHERE INDFMT= 'INDL'
     AND DATAFMT='STD'
     AND POPSRC='D'
     AND CONSOL='C'
-    AND DATADATE >= '01JAN1990'd
+    GROUP BY gvkey
     {order_by};
 QUIT;
 {extras}
@@ -100,16 +100,20 @@ def main(do_funda=True, do_fundq=True):
                           table_from='comp.funda',
                           left_join='',
                           order_by='ORDER BY gvkey, datadate',
-                          extras='%CCM(db_in=funda,db_out=data.funda);')
+                          extras="""%CCM(db_in=funda,db_out=data.funda,
+                              link_table=comp.ccmxpf_linktable);""")
     q_sql = SQL_STRING.format(table_out='fundq',
                       fields=',\n\t'.join(q_fields),
                       table_from='comp.fundq',
                       left_join='',
                       order_by='ORDER BY gvkey, datadate',
-                      extras='%QUARTERIZE(db_in=fundq,db_out=fundq2,IDVAR=fyr gvkey);\n'
-                             '%CCM(db_in=fundq2,db_out=data.fundq);\n'
-                             'DATA data.fundq;SET data.fundq;oancfq=oancfy_q;DROP oancfy_q;RUN;'
-                             )
+                      extras="""%QUARTERIZE(db_in=fundq,db_out=fundq2,
+                                            IDVAR=fyr gvkey);
+                                %CCM(db_in=fundq2,db_out=data.fundq,
+                                     link_table=comp.ccmxpf_linktable);
+                                DATA data.fundq;
+                                  SET data.fundq;oancfq=oancfy_q;DROP oancfy_q;RUN;
+                             """)
     with open('/tmp/funda.sas', 'w') as fh:
         fh.write(a_sql)
     with open('/tmp/fundq.sas', 'w') as fh:
@@ -132,3 +136,5 @@ if __name__ == '__main__':
     do_fundq=_args.get('--quarter', False)
     if do_funda or do_fundq:
         main(do_funda=do_funda, do_fundq=do_fundq)
+    else:
+        print(__doc__)
