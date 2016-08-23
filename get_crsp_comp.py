@@ -53,7 +53,7 @@ LIBNAME data "~/Dropbox/Documents/School/_data/big/";
 PROC SQL;
     CREATE TABLE {table_out}(WHERE=(DATADATE GE '01JAN1990'd)) AS
     SELECT {fields},
-        MIN(datadate) AS crsp_start FORMAT YYMMDD10.
+        MIN(datadate) AS comp_start FORMAT YYMMDD10.
     FROM {table_from}
     WHERE INDFMT= 'INDL'
     AND DATAFMT='STD'
