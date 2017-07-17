@@ -12,6 +12,7 @@ Options:
     -h, --help       Show this help
     -a, --annual     Create Annual FUNDA file
     -q, --quarter    Create Quarterly FUNDQ file
+    -c, --all        Get all fields (SELECT *)
 """
 
 import os
@@ -76,7 +77,7 @@ def get_fundaq(path_to_fund):
             break
     return funda_fields, fundq_fields
 
-def main(do_funda=True, do_fundq=True):
+def main(do_funda=True, do_fundq=True, get_star=False):
     """
     Create .SAS files in /tmp and run them to generate CSV dumps of
     funda and fundq.
@@ -94,6 +95,9 @@ def main(do_funda=True, do_fundq=True):
         else:
             q_fields.append(ktoq(f, fundq_fields))
             q_names.append(f)
+    if get_star:
+        a_fields = ["*", ]
+        q_fields = ["*", ]
 
     a_sql = SQL_STRING.format(table_out='funda',
                           fields=','.join(a_fields),
@@ -134,7 +138,8 @@ if __name__ == '__main__':
     _args = docopt(__doc__)
     do_funda=_args.get('--annual', False)
     do_fundq=_args.get('--quarter', False)
+    get_star=_args.get('--all', False)
     if do_funda or do_fundq:
-        main(do_funda=do_funda, do_fundq=do_fundq)
+        main(do_funda=do_funda, do_fundq=do_fundq, get_star=get_star)
     else:
         print(__doc__)
