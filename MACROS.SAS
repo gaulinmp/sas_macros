@@ -87,6 +87,7 @@ ENDRSUBMIT;
 			   input @1 line $varying1024. l; 
 			   call symput('dbpass',substr(line,1,l)); 
 			run;
+			options nosymbolgen;
 		%END;%ELSE %LET dbpass=_PROMPT_;
         %LET WRDS=wrds-cloud.wharton.upenn.edu 4016;
         /*%LET &dbpass=%STR({sasenc}HARDCODEPASSWORDHEREIFITSUITSYOU);*/
