@@ -55,7 +55,46 @@ RSUBMIT;
 ENDRSUBMIT;
 %WRDS("close");
 %MEND example_wrds_pull;
-%PUT;
+
+
+
+%PUT %NRSTR(%%)WRDS("open/close");
+%MACRO WRDS(action);
+  
+  *This bit sets up the password file.;
+    %LET remotepwf = %STR(%SYSFUNC(GETOPTION(autoexec)));
+    %LET remotepwf = %SUBSTR(&remotepwf, 1, %EVAL(%LENGTH(&remotepwf)-12))wrds_password.sas;
+    filename remotepw "&remotepwf";
+  
+  /* *Run this comment once to save your password into an encoded file;
+    * %WINDOW defines the prompt *;
+    %window info
+      #3 @5 'Please enter password:'
+      #3 @28 pass 32 attr=underline display=no;
+    * %DISPLAY invokes the prompt *;
+    %display info;
+
+    proc pwencode in="&password" out=remotepw;
+    run;
+  */
+
+    %IF &action = "open" %THEN %DO;
+		%IF %SYSFUNC(FEXIST(remotepw)) %THEN %DO;
+			options symbolgen;
+			data _null_;
+			   infile remotepw obs=1 length=l; 
+			   input @;
+			   input @1 line $varying1024. l; 
+			   call symput('dbpass',substr(line,1,l)); 
+			run;
+		%END;%ELSE %LET dbpass=_PROMPT_;
+        %LET WRDS=wrds-cloud.wharton.upenn.edu 4016;
+        /*%LET &dbpass=%STR({sasenc}HARDCODEPASSWORDHEREIFITSUITSYOU);*/
+        OPTIONS comamid=TCP remote=WRDS;
+        SIGNON USERNAME="gaulinmp" PASSWORD="&dbpass";
+    %END;
+    %ELSE SIGNOFF;
+%MEND WRDS;
 
 
 %PUT %NRSTR(%%)COMPWHERE(libname);
