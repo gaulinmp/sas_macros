@@ -60,12 +60,12 @@ ENDRSUBMIT;
 
 %PUT %NRSTR(%%)WRDS("open/close");
 %MACRO WRDS(action);
-  
+
   *This bit sets up the password file.;
-    %LET remotepwf = %STR(%SYSFUNC(GETOPTION(autoexec)));
-    %LET remotepwf = %SUBSTR(&remotepwf, 1, %EVAL(%LENGTH(&remotepwf)-12))wrds_password.sas;
-    filename remotepw "&remotepwf";
-  
+  %LET remotepwf = %STR(%SYSFUNC(GETOPTION(autoexec)));
+  %LET remotepwf = %SUBSTR(&remotepwf, 1, %EVAL(%LENGTH(&remotepwf)-12))wrds_password.sas;
+  filename remotepw "&remotepwf";
+
   /* *Run this comment once to save your password into an encoded file;
     * %WINDOW defines the prompt *;
     %window info
@@ -78,23 +78,24 @@ ENDRSUBMIT;
     run;
   */
 
-    %IF &action = "open" %THEN %DO;
-		%IF %SYSFUNC(FEXIST(remotepw)) %THEN %DO;
-			options symbolgen;
-			data _null_;
-			   infile remotepw obs=1 length=l; 
-			   input @;
-			   input @1 line $varying1024. l; 
-			   call symput('dbpass',substr(line,1,l)); 
-			run;
-			options nosymbolgen;
-		%END;%ELSE %LET dbpass=_PROMPT_;
-        %LET WRDS=wrds-cloud.wharton.upenn.edu 4016;
-        /*%LET &dbpass=%STR({sasenc}HARDCODEPASSWORDHEREIFITSUITSYOU);*/
-        OPTIONS comamid=TCP remote=WRDS;
-        SIGNON USERNAME="gaulinmp" PASSWORD="&dbpass";
-    %END;
-    %ELSE SIGNOFF;
+  %IF &action = "open" %THEN %DO;
+    %IF %SYSFUNC(FEXIST(remotepw)) %THEN %DO;
+      options symbolgen;
+      data _null_;
+         infile remotepw obs=1 length=l;
+         input @;
+         input @1 line $varying1024. l;
+         call symput('dbpass',substr(line,1,l));
+      run;
+      options nosymbolgen;
+    %END;%ELSE %LET dbpass=_PROMPT_;
+
+    %LET WRDS=wrds-cloud.wharton.upenn.edu 4016;
+      /*%LET &dbpass=%STR({sasenc}HARDCODEPASSWORDHEREIFITSUITSYOU);*/
+      OPTIONS comamid=TCP remote=WRDS;
+      SIGNON USERNAME="gaulinmp" PASSWORD="&dbpass";
+  %END;
+  %ELSE SIGNOFF;
 %MEND WRDS;
 
 
@@ -138,6 +139,7 @@ ENDRSUBMIT;
 
 %PUT %NRSTR(%%)DROPTABLES(table_list) %NRSTR(*Separated by commas;);
 %MACRO DROPTABLES/PARMBUFF;
+/* Here syspbuff contains the comma separated list within parens, so just strip the parens */
 %LET local_var_list = %SUBSTR (&syspbuff, 2, %EVAL(%LENGTH(&syspbuff)-2));
 %PUT Syspbuff contains: &local_var_list;
 PROC SQL;
@@ -173,6 +175,46 @@ QUIT;
 
 
 
+
+%PUT %NRSTR(%%)DUP(var1, var2, ... , db_in=%NRSTR(&)syslast);
+%MACRO DUP/parmbuff;
+  %LET _opnote = %SYSFUNC(GETOPTION(notes));
+  OPTION NONOTES;
+
+  %LET _dbin = &syslast.;
+  %LET _go_til = %EVAL(%LENGTH(%NRBQUOTE(&syspbuff))-2);
+
+  %LET _re=%SYSFUNC(PRXPARSE(',\s*db_in\s*=\s*([^) ]*)'));
+  %LET _db_loc = %SYSFUNC(PRXMATCH(&_re, &syspbuff));
+
+  %IF (&_db_loc > 0) %THEN %DO;
+    %LET _go_til = %EVAL(&_db_loc - 2);
+    %LET _dbin = %SYSFUNC(PRXPOSN(&_re, 1, %NRBQUOTE(&syspbuff)));
+  %END;
+
+  %SYSCALL PRXFREE(_re);
+
+  %LET _vars = %SYSFUNC(SUBSTR(&syspbuff, 2, &_go_til));
+
+  PROC SQL NOPRINT;
+    CREATE TABLE _dup_table AS
+      SELECT COUNT(*) AS num_duplicates, &_vars
+      FROM &_dbin
+      GROUP BY &_vars
+      HAVING COUNT(*) > 1
+      ORDER BY &_vars;
+
+    SELECT DISTINCT COUNT(*) INTO :_num_dups
+      FROM _dup_table;
+  QUIT;
+  PROC SQL;
+
+  OPTION &_opnote;
+  %PUT NOTE:;%PUT NOTE: Table &_dbin has %SYSFUNC(STRIP(&_num_dups)) duplicates by key: &_vars;%PUT NOTE:;
+%MEND;
+
+
+
 %PUT %NRSTR(%%)EXPORT(dbms=TAB,db_in=syslast,filename=);
 %MACRO EXPORT(dbms=TAB,db_in=&syslast.,filename=);
   PROC EXPORT DATA=&db_in
@@ -194,8 +236,10 @@ QUIT;
 
 %PUT %NRSTR(%%)HEAD(db_in=syslast, n=2);
 %MACRO HEAD(db_in=&syslast, n=2);
+  TITLE "&db_in";
   PROC PRINT DATA=&db_in(obs=&n);
   RUN;
+  TITLE;
 %MEND HEAD;
 
 
